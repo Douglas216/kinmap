@@ -1,478 +1,428 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import ReactFlow, { Background, Controls, Handle, Position } from 'reactflow';
+import ELK from 'elkjs/lib/elk.bundled.js';
+import 'reactflow/dist/style.css';
+import familyData from './data/family.json';
 import './App.css';
 
-const relationColors = {
-  father: '#2ad7a0',
-  mother: '#2ad7a0',
-  husband: '#f78f3f',
-  wife: '#f78f3f',
-  brother: '#4ba3ff',
-  sister: '#4ba3ff',
-  sibling: '#4ba3ff',
-  child: '#c5d86d',
-  cousin: '#c86df7',
-  uncle: '#6dd3f7',
-  aunt: '#f0c36c',
-  grandparent: '#8aa0ff',
-  default: '#ffffff',
-};
+const ROOT_UNION_ID = 'u_jiangchun_chengrong';
+const MATERNAL_UNION_ID = 'u_chengyongshan_duanzhengbi';
+const ME_ID = 'p_jiangyida';
+const BROTHER_ID = 'p_jiangsenda';
 
-const initialMembers = [
-  {
-    id: 'me',
-    nameCn: '江道格',
-    nameEn: 'Douglas Jiang',
-    relation: 'me',
-    nickname: 'Doug',
-    location: 'Seattle, USA',
-    notes: 'Collects family stories and photos.',
-    x: 50,
-    y: 68,
-  },
-  {
-    id: 'father',
-    nameCn: '江海',
-    nameEn: 'Hai Jiang',
-    relation: 'father',
-    nickname: 'Uncle Hai',
-    location: 'Nanjing, China',
-    notes: 'Engineer; loves calligraphy.',
-    x: 38,
-    y: 42,
-  },
-  {
-    id: 'mother',
-    nameCn: '李青',
-    nameEn: 'Qing Li',
-    relation: 'mother',
-    nickname: 'Aunt Qing',
-    location: 'Nanjing, China',
-    notes: 'Keeps the family recipes.',
-    x: 62,
-    y: 42,
-  },
-  {
-    id: 'sister',
-    nameCn: '江安娜',
-    nameEn: 'Anna Jiang',
-    relation: 'sister',
-    nickname: 'AnAn',
-    location: 'Vancouver, Canada',
-    notes: 'Design student who documents family history.',
-    x: 50,
-    y: 52,
-  },
-  {
-    id: 'spouse',
-    nameCn: '林晓',
-    nameEn: 'Xiao Lin',
-    relation: 'wife',
-    nickname: 'Lin',
-    location: 'Seattle, USA',
-    notes: 'Introduced to family in 2020.',
-    x: 30,
-    y: 68,
-  },
-  {
-    id: 'p-grandpa',
-    nameCn: '江德成',
-    nameEn: 'Decheng Jiang',
-    relation: 'grandfather (paternal)',
-    nickname: 'Lao Ye',
-    location: 'Yangzhou, China',
-    notes: 'Kept the first written family tree.',
-    x: 30,
-    y: 20,
-  },
-  {
-    id: 'p-grandma',
-    nameCn: '孙敏',
-    nameEn: 'Min Sun',
-    relation: 'grandmother (paternal)',
-    nickname: 'Nai Nai',
-    location: 'Yangzhou, China',
-    notes: 'Taught calligraphy to the cousins.',
-    x: 42,
-    y: 20,
-  },
-  {
-    id: 'm-grandpa',
-    nameCn: '李盛',
-    nameEn: 'Sheng Li',
-    relation: 'grandfather (maternal)',
-    nickname: 'Gong Gong',
-    location: 'Chengdu, China',
-    notes: 'Keeps photo albums from the 60s.',
-    x: 58,
-    y: 20,
-  },
-  {
-    id: 'm-grandma',
-    nameCn: '周蕊',
-    nameEn: 'Rui Zhou',
-    relation: 'grandmother (maternal)',
-    nickname: 'Po Po',
-    location: 'Chengdu, China',
-    notes: 'Knows everyone’s childhood nicknames.',
-    x: 70,
-    y: 20,
-  },
-  {
-    id: 'p-uncle',
-    nameCn: '江山',
-    nameEn: 'Shan Jiang',
-    relation: 'uncle (paternal)',
-    nickname: 'Shan',
-    location: 'Shanghai, China',
-    notes: 'Family storyteller and archivist.',
-    x: 28,
-    y: 48,
-  },
-  {
-    id: 'cousin',
-    nameCn: '江悦',
-    nameEn: 'Yue Jiang',
-    relation: 'cousin',
-    nickname: 'Yuyu',
-    location: 'Shanghai, China',
-    notes: 'Started interviewing elders in 2023.',
-    x: 20,
-    y: 58,
-  },
-];
+const UNION_SIZE = { width: 260, height: 52 };
+const PERSON_SIZE = { width: 120, height: 40 };
+const JUNCTION_SIZE = { width: 6, height: 6 };
 
-const initialConnections = [
-  { id: 'me-father', from: 'me', to: 'father', type: 'child' },
-  { id: 'me-mother', from: 'me', to: 'mother', type: 'child' },
-  { id: 'me-sister', from: 'me', to: 'sister', type: 'sibling' },
-  { id: 'me-spouse', from: 'me', to: 'spouse', type: 'husband' },
-  { id: 'father-p-grandpa', from: 'father', to: 'p-grandpa', type: 'child' },
-  { id: 'father-p-grandma', from: 'father', to: 'p-grandma', type: 'child' },
-  { id: 'mother-m-grandpa', from: 'mother', to: 'm-grandpa', type: 'child' },
-  { id: 'mother-m-grandma', from: 'mother', to: 'm-grandma', type: 'child' },
-  { id: 'p-uncle-p-grandpa', from: 'p-uncle', to: 'p-grandpa', type: 'child' },
-  { id: 'p-uncle-p-grandma', from: 'p-uncle', to: 'p-grandma', type: 'child' },
-  { id: 'p-uncle-cousin', from: 'p-uncle', to: 'cousin', type: 'father' },
-  { id: 'father-p-uncle', from: 'father', to: 'p-uncle', type: 'brother' },
-];
+const elk = new ELK();
 
-function RelationChip({ label, type }) {
+function UnionNode({ data }) {
   return (
-    <span
-      className="relation-chip"
-      style={{ borderColor: relationColors[type] || relationColors.default }}
-    >
-      <span
-        className="relation-dot"
-        style={{ background: relationColors[type] || relationColors.default }}
-      />
-      {label}
-    </span>
-  );
-}
-
-function MemberCard({ member, selected, onSelect }) {
-  return (
-    <div
-      className={`node-card ${selected ? 'active' : ''}`}
-      style={{ left: `${member.x}%`, top: `${member.y}%` }}
-      onClick={() => onSelect(member.id)}
-    >
-      <div className="node-name-cn">{member.nameCn}</div>
-      <div className="node-relation">{member.relation}</div>
-      <div className="node-name-en">{member.nameEn}</div>
+    <div className="union-node">
+      <Handle type="target" position={Position.Top} className="node-handle" />
+      <span className={`union-name ${data.focusSide === 'left' ? 'active' : ''}`}>
+        {data.leftName}
+      </span>
+      <button className="union-toggle" onClick={data.onToggle}>
+        ⇄
+      </button>
+      <span className={`union-name ${data.focusSide === 'right' ? 'active' : ''}`}>
+        {data.rightName}
+      </span>
+      <Handle type="source" position={Position.Bottom} className="node-handle" />
     </div>
   );
 }
 
-function App() {
-  const [members, setMembers] = useState(initialMembers);
-  const [connections, setConnections] = useState(initialConnections);
-  const [selectedId, setSelectedId] = useState('me');
-  const [draft, setDraft] = useState({
-    nameCn: '',
-    nameEn: '',
-    relation: 'sister',
-    nickname: '',
-    location: '',
-    notes: '',
-    connectTo: 'me',
+function PersonNode({ data }) {
+  return (
+    <button className="person-node" onClick={data.onSelect}>
+      <Handle type="target" position={Position.Top} className="node-handle" />
+      {data.name}
+      <Handle type="source" position={Position.Bottom} className="node-handle" />
+    </button>
+  );
+}
+
+function JunctionNode({ data }) {
+  const ports = data?.ports || [];
+  return (
+    <div className="junction-node">
+      <Handle id="in" type="target" position={Position.Top} className="node-handle" />
+      {ports.map((port) => (
+        <Handle
+          key={port.handleId}
+          id={port.handleId}
+          type="source"
+          position={Position.Bottom}
+          className="node-handle"
+        />
+      ))}
+    </div>
+  );
+}
+
+function sortSiblings(a, b) {
+  const aDob = a.dob ? new Date(a.dob) : null;
+  const bDob = b.dob ? new Date(b.dob) : null;
+  if (aDob && bDob && aDob.getTime() !== bDob.getTime()) {
+    return aDob - bDob;
+  }
+  if (a.birthOrder && b.birthOrder && a.birthOrder !== b.birthOrder) {
+    return a.birthOrder - b.birthOrder;
+  }
+  return (a.names?.zh?.full || '').localeCompare(b.names?.zh?.full || '');
+}
+
+function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
+  const {
+    peopleById,
+    unionsById,
+    childrenByUnionId,
+    parentUnionByChildId,
+    onSelectPerson,
+    onToggleUnion,
+  } = maps;
+
+  const nodes = [];
+  const edges = [];
+  const nodeIds = new Set();
+  const edgeIds = new Set();
+
+  const addUnionNode = (unionId) => {
+    const union = unionsById.get(unionId);
+    if (!union || nodeIds.has(unionId)) return;
+    const left = peopleById.get(union.partnerLeftId);
+    const right = peopleById.get(union.partnerRightId);
+    nodes.push({
+      id: union.id,
+      type: 'unionNode',
+      data: {
+        leftName: left?.names?.zh?.full || union.partnerLeftId,
+        rightName: right?.names?.zh?.full || union.partnerRightId,
+        focusSide: unionFocusSide[union.id] || union.focusSide || 'left',
+        onToggle: () => onToggleUnion(union.id),
+      },
+      style: { ...UNION_SIZE },
+    });
+    nodeIds.add(unionId);
+  };
+
+  const addPersonNode = (personId) => {
+    const person = peopleById.get(personId);
+    if (!person || nodeIds.has(personId)) return;
+    nodes.push({
+      id: person.id,
+      type: 'personNode',
+      data: {
+        name: person.names?.zh?.full || person.id,
+        onSelect: () => onSelectPerson(person.id),
+      },
+      style: { ...PERSON_SIZE },
+    });
+    nodeIds.add(personId);
+  };
+
+  const addJunctionNode = (junctionId, portCount) => {
+    if (nodeIds.has(junctionId)) return;
+    const ports = [
+      { id: `${junctionId}:in`, handleId: 'in', side: 'NORTH' },
+      ...Array.from({ length: portCount }, (_, idx) => ({
+        id: `${junctionId}:out_${idx}`,
+        handleId: `out_${idx}`,
+        side: 'SOUTH',
+      })),
+    ];
+    nodes.push({
+      id: junctionId,
+      type: 'junction',
+      data: { ports },
+      style: { ...JUNCTION_SIZE },
+      ports,
+    });
+    nodeIds.add(junctionId);
+  };
+
+  const addEdge = (source, target, index, sourceHandle, targetHandle) => {
+    const id = `e_${source}_${target}_${index}`;
+    if (edgeIds.has(id)) return;
+    edges.push({
+      id,
+      source,
+      target,
+      type: 'smoothstep',
+      sourceHandle,
+      targetHandle,
+    });
+    edgeIds.add(id);
+  };
+
+  const addChildrenEdges = (unionId, children) => {
+    if (children.length === 0) return;
+    if (children.length === 1) {
+      const child = children[0];
+      addPersonNode(child.id);
+      addEdge(unionId, child.id, 0);
+      return;
+    }
+
+    const junctionId = `j-${unionId}`;
+    addJunctionNode(junctionId, children.length);
+    addEdge(unionId, junctionId, 0, undefined, 'in');
+
+    children.forEach((child, idx) => {
+      addPersonNode(child.id);
+      addEdge(junctionId, child.id, idx, `out_${idx}`);
+    });
+  };
+
+  const rootUnion = unionsById.get(rootUnionId);
+  if (!rootUnion) return { nodes, edges };
+  addUnionNode(rootUnionId);
+
+  const rawChildrenIds = childrenByUnionId.get(rootUnionId) || [];
+  const sortedChildren = rawChildrenIds
+    .map((id) => peopleById.get(id))
+    .filter(Boolean)
+    .sort(sortSiblings);
+  const finalChildren =
+    sortedChildren.length > 0
+      ? sortedChildren
+      : [ME_ID, BROTHER_ID]
+          .map((id) => peopleById.get(id))
+          .filter(Boolean)
+          .sort(sortSiblings);
+
+  addChildrenEdges(rootUnionId, finalChildren);
+
+  const rootFocusSide = unionFocusSide[rootUnionId] || rootUnion.focusSide || 'left';
+  const activeParentId =
+    rootFocusSide === 'left' ? rootUnion.partnerLeftId : rootUnion.partnerRightId;
+
+  const grandUnionId = parentUnionByChildId.get(activeParentId);
+  if (grandUnionId) {
+    addUnionNode(grandUnionId);
+  }
+
+  if (grandUnionId && rootFocusSide === 'right') {
+    const grandChildren = (childrenByUnionId.get(grandUnionId) || [])
+      .map((id) => peopleById.get(id))
+      .filter(Boolean)
+      .sort(sortSiblings);
+
+    if (grandChildren.length > 0) {
+      addChildrenEdges(grandUnionId, grandChildren);
+    }
+    addEdge(grandUnionId, rootUnionId, 0);
+
+    if (grandUnionId === MATERNAL_UNION_ID) {
+      grandChildren
+        .filter((child) => child.id !== activeParentId)
+        .forEach((sibling) => {
+          const siblingUnion = Array.from(unionsById.values()).find(
+            (union) =>
+              union.id !== rootUnionId &&
+              (union.partnerLeftId === sibling.id || union.partnerRightId === sibling.id)
+          );
+          if (!siblingUnion) return;
+          addUnionNode(siblingUnion.id);
+          addEdge(sibling.id, siblingUnion.id, 0);
+          const cousinChildren = (childrenByUnionId.get(siblingUnion.id) || [])
+            .map((id) => peopleById.get(id))
+            .filter(Boolean)
+            .sort(sortSiblings);
+          addChildrenEdges(siblingUnion.id, cousinChildren);
+        });
+    }
+  } else if (grandUnionId) {
+    addEdge(grandUnionId, rootUnionId, 0);
+  }
+
+  const dedupedNodes = Array.from(new Map(nodes.map((node) => [node.id, node])).values());
+  const dedupedEdges = Array.from(new Map(edges.map((edge) => [edge.id, edge])).values());
+
+  return { nodes: dedupedNodes, edges: dedupedEdges };
+}
+
+async function layoutWithElk(nodes, edges) {
+  const graph = {
+    id: 'root',
+    layoutOptions: {
+      'elk.algorithm': 'layered',
+      'elk.direction': 'DOWN',
+      'elk.portConstraints': 'FIXED_ORDER',
+      'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+      'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
+      'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
+      'elk.layered.considerModelOrder': 'true',
+      'elk.spacing.nodeNode': '60',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '50',
+      'elk.spacing.edgeEdge': '20',
+    },
+    children: nodes.map((node) => {
+      const ports = node.ports || node.data?.ports;
+      return {
+        id: node.id,
+        width: node.style?.width || PERSON_SIZE.width,
+        height: node.style?.height || PERSON_SIZE.height,
+        ports: ports?.map((port) => ({
+          id: port.id,
+          properties: {
+            'elk.port.side': port.side,
+          },
+        })),
+      };
+    }),
+    edges: edges.map((edge) => {
+      const sourcePort = edge.sourceHandle
+        ? `${edge.source}:${edge.sourceHandle}`
+        : edge.source;
+      const targetPort = edge.targetHandle
+        ? `${edge.target}:${edge.targetHandle}`
+        : edge.target;
+      return {
+        id: edge.id,
+        sources: [sourcePort],
+        targets: [targetPort],
+      };
+    }),
+  };
+
+  const layout = await elk.layout(graph);
+  const nodePositions = new Map();
+  layout.children?.forEach((child) => {
+    nodePositions.set(child.id, { x: child.x || 0, y: child.y || 0 });
   });
 
-  const selectedMember = useMemo(
-    () => members.find((m) => m.id === selectedId),
-    [members, selectedId]
+  return {
+    nodes: nodes.map((node) => ({
+      ...node,
+      position: nodePositions.get(node.id) || { x: 0, y: 0 },
+    })),
+    edges,
+  };
+}
+
+export default function App() {
+  const peopleById = useMemo(
+    () => new Map(familyData.people.map((person) => [person.id, person])),
+    []
+  );
+  const unionsById = useMemo(
+    () => new Map(familyData.unions.map((union) => [union.id, union])),
+    []
+  );
+  const childrenByUnionId = useMemo(() => {
+    const map = new Map();
+    familyData.childOf.forEach((link) => {
+      if (!map.has(link.unionId)) map.set(link.unionId, []);
+      map.get(link.unionId).push(link.childId);
+    });
+    return map;
+  }, []);
+  const parentUnionByChildId = useMemo(() => {
+    const map = new Map();
+    familyData.childOf.forEach((link) => {
+      map.set(link.childId, link.unionId);
+    });
+    return map;
+  }, []);
+
+  const [selectedPersonId, setSelectedPersonId] = useState(null);
+  const [unionFocusSide, setUnionFocusSide] = useState(() =>
+    familyData.unions.reduce((acc, union) => {
+      acc[union.id] = union.focusSide || 'left';
+      return acc;
+    }, {})
   );
 
-  const stats = useMemo(() => {
-    const locations = new Set();
-    members.forEach((m) => {
-      if (m.location) locations.add(m.location);
-    });
-    return { people: members.length, locations: locations.size };
-  }, [members]);
-
-  const handleAddRelative = (event) => {
-    event.preventDefault();
-    if (!draft.nameCn.trim()) return;
-
-    const id = `member-${Date.now()}`;
-    const newMember = {
-      id,
-      nameCn: draft.nameCn,
-      nameEn: draft.nameEn,
-      relation: draft.relation,
-      nickname: draft.nickname,
-      location: draft.location,
-      notes: draft.notes,
-      x: 10 + Math.random() * 80,
-      y: 18 + Math.random() * 70,
-    };
-
-    const newConnection = {
-      id: `${id}-${draft.connectTo}`,
-      from: id,
-      to: draft.connectTo,
-      type: draft.relation,
-    };
-
-    setMembers((prev) => [...prev, newMember]);
-    setConnections((prev) => [...prev, newConnection]);
-    setSelectedId(id);
-    setDraft({
-      nameCn: '',
-      nameEn: '',
-      relation: 'sister',
-      nickname: '',
-      location: '',
-      notes: '',
-      connectTo: 'me',
-    });
+  const handleToggleUnion = (unionId) => {
+    setUnionFocusSide((prev) => ({
+      ...prev,
+      [unionId]: prev[unionId] === 'left' ? 'right' : 'left',
+    }));
   };
 
-  const renderLine = (line) => {
-    const from = members.find((m) => m.id === line.from);
-    const to = members.find((m) => m.id === line.to);
-    if (!from || !to) return null;
-    const active = selectedId === line.from || selectedId === line.to;
-    const color = relationColors[line.type] || relationColors.default;
+  const { nodes: rawNodes, edges: rawEdges } = useMemo(
+    () =>
+      buildVisibleGraph(ROOT_UNION_ID, unionFocusSide, {
+        peopleById,
+        unionsById,
+        childrenByUnionId,
+        parentUnionByChildId,
+        onSelectPerson: setSelectedPersonId,
+        onToggleUnion: handleToggleUnion,
+      }),
+    [unionFocusSide, peopleById, unionsById, childrenByUnionId, parentUnionByChildId]
+  );
 
-    return (
-      <line
-        key={line.id}
-        x1={from.x}
-        y1={from.y}
-        x2={to.x}
-        y2={to.y}
-        stroke={color}
-        className={`map-line ${active ? 'active' : ''}`}
-      />
-    );
-  };
+  const [layoutedNodes, setLayoutedNodes] = useState([]);
+  const [layoutedEdges, setLayoutedEdges] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    layoutWithElk(rawNodes, rawEdges).then((result) => {
+      if (!active) return;
+      setLayoutedNodes(result.nodes);
+      setLayoutedEdges(result.edges);
+    });
+    return () => {
+      active = false;
+    };
+  }, [rawNodes, rawEdges]);
+
+  const selectedPerson = selectedPersonId ? peopleById.get(selectedPersonId) : null;
 
   return (
-    <div className="page">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">KinMap</p>
-          <h1>Know every connection in your family network.</h1>
-          <p className="lede">
-            Nodes show Chinese names. Open a profile to reveal English names,
-            nicknames, current location, and remarks.
-          </p>
-          <div className="hero-actions">
-            <button className="cta" onClick={() => setSelectedId('me')}>
-              Center on me
-            </button>
-            <RelationChip label="Father / Mother" type="father" />
-            <RelationChip label="Brother / Sister" type="sibling" />
-            <RelationChip label="Spouse" type="wife" />
-          </div>
-        </div>
-        <div className="hero-card">
-          <div className="stat">
-            <div className="stat-number">{stats.people}</div>
-            <div className="stat-label">People mapped</div>
-          </div>
-          <div className="stat">
-            <div className="stat-number">{stats.locations}</div>
-            <div className="stat-label">Locations tracked</div>
-          </div>
-          <p className="stat-footnote">
-            Add names as you go. Relationships are simplified to father, mother,
-            husband, wife, brother, sister.
-          </p>
-        </div>
-      </header>
+    <div className="family-page">
+      <div className={`canvas-shell ${selectedPerson ? 'with-panel' : ''}`}>
+        <ReactFlow
+          nodes={layoutedNodes}
+          edges={layoutedEdges}
+          nodeTypes={{ unionNode: UnionNode, personNode: PersonNode, junction: JunctionNode }}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+        >
+          <Background gap={16} color="#d8c9b3" />
+          <Controls />
+        </ReactFlow>
+      </div>
 
-      <main className="layout">
-        <section className="panel">
+      {selectedPerson && (
+        <aside className="profile-panel">
           <div className="panel-header">
-            <div>
-              <p className="eyebrow">Network map</p>
-              <h2>Family graph</h2>
-            </div>
-            <button className="ghost" onClick={() => setSelectedId('me')}>
-              Focus on me
+            <h2>{selectedPerson.names?.zh?.full || '人物档案'}</h2>
+            <button className="close-btn" onClick={() => setSelectedPersonId(null)}>
+              ×
             </button>
           </div>
-
-          <div className="map-shell">
-            <svg viewBox="0 0 100 100" className="map-lines">
-              {connections.map((line) => renderLine(line))}
-            </svg>
-            {members.map((member) => (
-              <MemberCard
-                key={member.id}
-                member={member}
-                selected={selectedId === member.id}
-                onSelect={setSelectedId}
-              />
-            ))}
+          <div className="panel-body">
+            <p>
+              <span className="label">英文名</span>
+              {selectedPerson.names?.en
+                ? `${selectedPerson.names.en.first} ${selectedPerson.names.en.last}`.trim()
+                : '—'}
+            </p>
+            <p>
+              <span className="label">出生日期</span>
+              {selectedPerson.dob || '—'}
+            </p>
+            <p>
+              <span className="label">所在地</span>
+              {selectedPerson.location || '—'}
+            </p>
+            <p>
+              <span className="label">昵称</span>
+              {selectedPerson.nicknames?.length ? selectedPerson.nicknames.join('、') : '—'}
+            </p>
+            <p>
+              <span className="label">备注</span>
+              {selectedPerson.notes || '—'}
+            </p>
           </div>
-
-          <div className="legend">
-            <RelationChip label="Parent" type="father" />
-            <RelationChip label="Sibling" type="sibling" />
-            <RelationChip label="Spouse" type="wife" />
-            <RelationChip label="Cousin" type="cousin" />
-            <RelationChip label="Grandparent" type="grandparent" />
-          </div>
-        </section>
-
-        <aside className="panel detail">
-          {selectedMember ? (
-            <>
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">Profile</p>
-                  <h2>{selectedMember.nameCn}</h2>
-                  <p className="subhead">{selectedMember.relation}</p>
-                </div>
-                <RelationChip label="Selected" type={selectedMember.relation} />
-              </div>
-              <div className="detail-body">
-                <dl>
-                  <dt>English name</dt>
-                  <dd>{selectedMember.nameEn || '—'}</dd>
-                  <dt>Nickname</dt>
-                  <dd>{selectedMember.nickname || '—'}</dd>
-                  <dt>Current location</dt>
-                  <dd>{selectedMember.location || '—'}</dd>
-                  <dt>Notes</dt>
-                  <dd>{selectedMember.notes || '—'}</dd>
-                </dl>
-              </div>
-            </>
-          ) : (
-            <p>Select a person to see details.</p>
-          )}
-          <div className="divider" />
-          <form className="add-form" onSubmit={handleAddRelative}>
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Add relative</p>
-                <h3>Extend the tree</h3>
-              </div>
-            </div>
-            <div className="form-grid">
-              <label>
-                Chinese name
-                <input
-                  required
-                  value={draft.nameCn}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, nameCn: e.target.value }))
-                  }
-                  placeholder="e.g., 江小龙"
-                />
-              </label>
-              <label>
-                English name
-                <input
-                  value={draft.nameEn}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, nameEn: e.target.value }))
-                  }
-                  placeholder="e.g., Xiaolong Jiang"
-                />
-              </label>
-              <label>
-                Relationship type
-                <select
-                  value={draft.relation}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, relation: e.target.value }))
-                  }
-                >
-                  <option value="father">Father</option>
-                  <option value="mother">Mother</option>
-                  <option value="husband">Husband</option>
-                  <option value="wife">Wife</option>
-                  <option value="brother">Brother</option>
-                  <option value="sister">Sister</option>
-                  <option value="child">Child</option>
-                  <option value="cousin">Cousin</option>
-                  <option value="uncle">Uncle</option>
-                  <option value="aunt">Aunt</option>
-                  <option value="grandparent">Grandparent</option>
-                </select>
-              </label>
-              <label>
-                Connect to
-                <select
-                  value={draft.connectTo}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, connectTo: e.target.value }))
-                  }
-                >
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nameCn} — {m.relation}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Nickname
-                <input
-                  value={draft.nickname}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, nickname: e.target.value }))
-                  }
-                  placeholder="Family nickname"
-                />
-              </label>
-              <label>
-                Location
-                <input
-                  value={draft.location}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, location: e.target.value }))
-                  }
-                  placeholder="City, Country"
-                />
-              </label>
-              <label className="full">
-                Notes
-                <textarea
-                  rows={3}
-                  value={draft.notes}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, notes: e.target.value }))
-                  }
-                  placeholder="Add remarks, how you met, anecdotes..."
-                />
-              </label>
-            </div>
-            <button type="submit" className="cta full-width">
-              Add to KinMap
-            </button>
-          </form>
         </aside>
-      </main>
+      )}
     </div>
   );
 }
-
-export default App;

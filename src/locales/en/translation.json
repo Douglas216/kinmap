@@ -1,0 +1,100 @@
+{
+  "brand": "KinMap",
+  "hero": {
+    "title": "KinMap",
+    "subtitle": "Never have to whisper \"who is this\" again",
+    "center": "Center on me"
+  },
+  "chips": {
+    "parent": "Parent",
+    "sibling": "Sibling",
+    "spouse": "Spouse",
+    "cousin": "Cousin",
+    "grandparent": "Grandparent"
+  },
+  "stats": {
+    "people": "People mapped",
+    "locations": "Locations tracked",
+    "footnote": "Add names as you go. Relationships are simplified to father, mother, spouse, siblings, children."
+  },
+  "map": {
+    "eyebrow": "Network map",
+    "title": "Family graph",
+    "focus": "Focus on me",
+    "current": "Current node: {{name}}"
+  },
+  "legend": {
+    "title": "Legend"
+  },
+  "profile": {
+    "eyebrow": "Profile",
+    "selected": "Selected",
+    "empty": "Select a person to see details.",
+    "saveSelf": "Save my profile"
+  },
+  "detail": {
+    "englishName": "English name",
+    "nickname": "Nickname",
+    "location": "Current location",
+    "gender": "Gender",
+    "notes": "Notes"
+  },
+  "gender": {
+    "unspecified": "Prefer not to say",
+    "male": "Male",
+    "female": "Female",
+    "nonbinary": "Non-binary"
+  },
+  "birthday": "Birthday",
+  "add": {
+    "eyebrow": "Add relative",
+    "title": "Add relative",
+    "button": "Add",
+    "emptyPrompt": "Start by adding yourself"
+  },
+  "form": {
+    "nameCn": "Chinese name",
+    "nameEn": "English name",
+    "relation": "Relationship type",
+    "connectTo": "Connect to",
+    "nickname": "Nickname",
+    "location": "Location",
+    "notes": "Notes",
+    "birthday": "Birthday"
+  },
+  "profileEdit": {
+    "title": "My profile",
+    "name": "Name",
+    "save": "Save",
+    "delete": "Delete node"
+  },
+  "relation": {
+    "myself": "Me",
+    "father": "Father",
+    "mother": "Mother",
+    "husband": "Husband",
+    "wife": "Wife",
+    "brother": "Brother",
+    "sister": "Sister",
+    "brotherOlder": "Older brother",
+    "brotherYounger": "Younger brother",
+    "sisterOlder": "Older sister",
+    "sisterYounger": "Younger sister",
+    "sibling": "Sibling",
+    "relative": "Relative",
+    "child": "Child",
+    "cousin": "Cousin",
+    "uncle": "Uncle",
+    "aunt": "Aunt",
+    "grandparent": "Grandparent"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English",
+    "toggleToEn": "Switch to English",
+    "toggleToZh": "切换到中文"
+  },
+  "footnote": {
+    "selfNote": "Tap “me” to set your name and gender, then start adding relatives."
+  }
+}

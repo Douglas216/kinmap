@@ -1,0 +1,205 @@
+{
+  "people": [
+    {
+      "id": "p_jiangyida",
+      "names": {
+        "en": { "first": "Douglas", "last": "Jiang" },
+        "zh": { "full": "江一达" }
+      },
+      "gender": "M",
+      "dob": "2002-02-16",
+      "birthOrder": 1,
+      "nicknames": [],
+      "location": "Boston, MA, USA",
+      "photo": null,
+      "notes": ""
+    },
+    {
+      "id": "p_jiangsenda",
+      "names": {
+        "en": { "first": "Samuel", "last": "Jiang" },
+        "zh": { "full": "江森达" }
+      },
+      "gender": "M",
+      "dob": "2009-12-08",
+      "birthOrder": 2,
+      "nicknames": [],
+      "location": "Shanghai, China",
+      "photo": null,
+      "notes": ""
+    },
+
+    {
+      "id": "p_jiangchun",
+      "names": {
+        "en": { "first": "Chun", "last": "Jiang" },
+        "zh": { "full": "江春" }
+      },
+      "gender": "M",
+      "dob": "1969-03-30",
+      "birthOrder": null,
+      "nicknames": ["JC"],
+      "location": "Shanghai, China",
+      "photo": null,
+      "notes": ""
+    },
+    {
+      "id": "p_chengrong",
+      "names": {
+        "en": { "first": "Rong", "last": "Cheng" },
+        "zh": { "full": "程蓉" }
+      },
+      "gender": "F",
+      "dob": "1969-07-06",
+      "birthOrder": 1,
+      "nicknames": [],
+      "location": "Shanghai, China",
+      "photo": null,
+      "notes": ""
+    },
+
+    {
+      "id": "p_jianghuancheng",
+      "names": {
+        "en": { "first": "Huancheng", "last": "Jiang" },
+        "zh": { "full": "江欢成" }
+      },
+      "gender": "M",
+      "dob": "1938-01-24",
+      "birthOrder": null,
+      "nicknames": [],
+      "location": "Shanghai, China",
+      "photo": null,
+      "notes": ""
+    },
+    {
+      "id": "p_xumiaozhi",
+      "names": {
+        "en": { "first": "Miaozhi", "last": "Xu" },
+        "zh": { "full": "徐妙芝" }
+      },
+      "gender": "F",
+      "dob": "1945-06-05",
+      "birthOrder": null,
+      "nicknames": [],
+      "location": "Shanghai, China",
+      "photo": null,
+      "notes": ""
+    },
+
+    {
+      "id": "p_chengyongshan",
+      "names": {
+        "en": { "first": "Yongshan", "last": "Cheng" },
+        "zh": { "full": "程永善" }
+      },
+      "gender": "M",
+      "dob": "1937-12-25",
+      "birthOrder": null,
+      "nicknames": [],
+      "location": "Chengdu, China",
+      "photo": null,
+      "notes": ""
+    },
+    {
+      "id": "p_duanzhengbi",
+      "names": {
+        "en": { "first": "Zhengbi", "last": "Duan" },
+        "zh": { "full": "段正碧" }
+      },
+      "gender": "F",
+      "dob": "1940-06-01",
+      "birthOrder": null,
+      "nicknames": [],
+      "location": "Chengdu, China",
+      "photo": null,
+      "notes": ""
+    },
+
+    {
+      "id": "p_chengyafei",
+      "names": {
+        "en": { "first": "Yafei", "last": "Cheng" },
+        "zh": { "full": "程亚非" }
+      },
+      "gender": "F",
+      "dob": null,
+      "birthOrder": 2,
+      "nicknames": [],
+      "location": "San Mateo, CA, USA",
+      "photo": null,
+      "notes": ""
+    },
+    {
+      "id": "p_fengyizheng",
+      "names": {
+        "en": { "first": "Yizheng", "last": "Feng" },
+        "zh": { "full": "冯义正" }
+      },
+      "gender": "M",
+      "dob": null,
+      "birthOrder": null,
+      "nicknames": [],
+      "location": "",
+      "photo": null,
+      "notes": "Aunt's husband"
+    },
+    {
+      "id": "p_fengyuepeng",
+      "names": {
+        "en": { "first": "Yuepeng", "last": "Feng" },
+        "zh": { "full": "冯岳鹏" }
+      },
+      "gender": "M",
+      "dob": null,
+      "birthOrder": 1,
+      "nicknames": [],
+      "location": "San Mateo, CA, USA",
+      "photo": null,
+      "notes": ""
+    }
+  ],
+
+  "unions": [
+    {
+      "id": "u_jiangchun_chengrong",
+      "partnerLeftId": "p_jiangchun",
+      "partnerRightId": "p_chengrong",
+      "status": "married",
+      "focusSide": "left"
+    },
+    {
+      "id": "u_jianghuancheng_xumiaozhi",
+      "partnerLeftId": "p_jianghuancheng",
+      "partnerRightId": "p_xumiaozhi",
+      "status": "married",
+      "focusSide": "left"
+    },
+    {
+      "id": "u_chengyongshan_duanzhengbi",
+      "partnerLeftId": "p_chengyongshan",
+      "partnerRightId": "p_duanzhengbi",
+      "status": "married",
+      "focusSide": "left"
+    },
+    {
+      "id": "u_fengyizheng_chengyafei",
+      "partnerLeftId": "p_fengyizheng",
+      "partnerRightId": "p_chengyafei",
+      "status": "married",
+      "focusSide": "left"
+    }
+  ],
+
+  "childOf": [
+    { "childId": "p_jiangyida", "unionId": "u_jiangchun_chengrong" },
+    { "childId": "p_jiangsenda", "unionId": "u_jiangchun_chengrong" },
+
+    { "childId": "p_jiangchun", "unionId": "u_jianghuancheng_xumiaozhi" },
+
+    { "childId": "p_chengrong", "unionId": "u_chengyongshan_duanzhengbi" },
+    { "childId": "p_chengyafei", "unionId": "u_chengyongshan_duanzhengbi" },
+
+    { "childId": "p_fengyuepeng", "unionId": "u_fengyizheng_chengyafei" }
+  ]
+}

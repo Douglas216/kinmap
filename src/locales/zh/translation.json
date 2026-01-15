@@ -1,0 +1,100 @@
+{
+  "brand": "亲图",
+  "hero": {
+    "title": "亲图",
+    "subtitle": "再也不用偷偷问“这是谁”",
+    "center": "回到“我”"
+  },
+  "chips": {
+    "parent": "父母",
+    "sibling": "兄弟姐妹",
+    "spouse": "配偶",
+    "cousin": "堂表亲",
+    "grandparent": "祖父母"
+  },
+  "stats": {
+    "people": "已记录亲人",
+    "locations": "城市/地区",
+    "footnote": "随时添加姓名，亲属关系简化为父母、配偶、兄弟姐妹、子女等。"
+  },
+  "map": {
+    "eyebrow": "关系图",
+    "title": "家庭网络",
+    "focus": "聚焦“我”",
+    "current": "当前节点：{{name}}"
+  },
+  "legend": {
+    "title": "关系图例"
+  },
+  "profile": {
+    "eyebrow": "人物档案",
+    "selected": "当前选中",
+    "empty": "点击节点查看人物详情。",
+    "saveSelf": "保存我的资料"
+  },
+  "detail": {
+    "englishName": "英文名",
+    "nickname": "昵称",
+    "location": "所在城市",
+    "gender": "性别",
+    "notes": "备注"
+  },
+  "gender": {
+    "unspecified": "不透露",
+    "male": "男性",
+    "female": "女性",
+    "nonbinary": "非二元"
+  },
+  "birthday": "生日",
+  "add": {
+    "eyebrow": "添加亲人",
+    "title": "添加亲属",
+    "button": "添加",
+    "emptyPrompt": "点击加号添加自己"
+  },
+  "form": {
+    "nameCn": "中文名",
+    "nameEn": "英文名",
+    "relation": "亲属关系",
+    "connectTo": "连接到",
+    "nickname": "昵称",
+    "location": "所在城市",
+    "notes": "备注",
+    "birthday": "生日"
+  },
+  "profileEdit": {
+    "title": "我的资料",
+    "name": "姓名",
+    "save": "保存",
+    "delete": "删除节点"
+  },
+  "relation": {
+    "myself": "我",
+    "father": "父亲",
+    "mother": "母亲",
+    "husband": "丈夫",
+    "wife": "妻子",
+    "brother": "兄弟",
+    "sister": "姐妹",
+    "brotherOlder": "哥哥",
+    "brotherYounger": "弟弟",
+    "sisterOlder": "姐姐",
+    "sisterYounger": "妹妹",
+    "sibling": "兄弟姐妹",
+    "relative": "亲戚",
+    "child": "子女",
+    "cousin": "堂/表亲",
+    "uncle": "叔伯/舅舅",
+    "aunt": "姑姨/舅妈",
+    "grandparent": "祖父母"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English",
+    "toggleToEn": "切换到英文",
+    "toggleToZh": "切换到中文"
+  },
+  "footnote": {
+    "selfNote": "点击“我”来设置你的姓名和性别，然后开始添加亲人。"
+  }
+}

@@ -105,8 +105,13 @@ body {
 }
 
 .union-name {
+  border: none;
+  background: transparent;
+  padding: 0;
   font-size: 18px;
+  font-family: inherit;
   color: var(--gray);
+  cursor: pointer;
 }
 
 .union-name.active {
@@ -149,19 +154,6 @@ body {
 .person-node .node-handle {
   opacity: 0;
   pointer-events: none;
-}
-
-.junction-node .node-handle {
-  opacity: 0;
-  pointer-events: none;
-}
-.junction-node {
-  width: 6px;
-  height: 6px;
-  background: #b1b1b7;
-  border: none;
-  border-radius: 50%;
-  position: relative;
 }
 
 .react-flow__edge-path {

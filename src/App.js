@@ -7,12 +7,12 @@ import './App.css';
 
 const ROOT_UNION_ID = 'u_jiangchun_chengrong';
 const MATERNAL_UNION_ID = 'u_chengyongshan_duanzhengbi';
+const AUNT_UNION_ID = 'u_fengyizheng_chengyafei';
 const ME_ID = 'p_jiangyida';
 const BROTHER_ID = 'p_jiangsenda';
 
 const UNION_SIZE = { width: 260, height: 52 };
 const PERSON_SIZE = { width: 120, height: 40 };
-const JUNCTION_SIZE = { width: 6, height: 6 };
 
 const elk = new ELK();
 
@@ -20,15 +20,23 @@ function UnionNode({ data }) {
   return (
     <div className="union-node">
       <Handle type="target" position={Position.Top} className="node-handle" />
-      <span className={`union-name ${data.focusSide === 'left' ? 'active' : ''}`}>
+      <button
+        type="button"
+        className={`union-name ${data.focusSide === 'left' ? 'active' : ''}`}
+        onClick={() => data.onSelectPerson?.(data.leftId)}
+      >
         {data.leftName}
-      </span>
+      </button>
       <button className="union-toggle" onClick={data.onToggle}>
         ⇄
       </button>
-      <span className={`union-name ${data.focusSide === 'right' ? 'active' : ''}`}>
+      <button
+        type="button"
+        className={`union-name ${data.focusSide === 'right' ? 'active' : ''}`}
+        onClick={() => data.onSelectPerson?.(data.rightId)}
+      >
         {data.rightName}
-      </span>
+      </button>
       <Handle type="source" position={Position.Bottom} className="node-handle" />
     </div>
   );
@@ -41,24 +49,6 @@ function PersonNode({ data }) {
       {data.name}
       <Handle type="source" position={Position.Bottom} className="node-handle" />
     </button>
-  );
-}
-
-function JunctionNode({ data }) {
-  const ports = data?.ports || [];
-  return (
-    <div className="junction-node">
-      <Handle id="in" type="target" position={Position.Top} className="node-handle" />
-      {ports.map((port) => (
-        <Handle
-          key={port.handleId}
-          id={port.handleId}
-          type="source"
-          position={Position.Bottom}
-          className="node-handle"
-        />
-      ))}
-    </div>
   );
 }
 
@@ -100,8 +90,11 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
       data: {
         leftName: left?.names?.zh?.full || union.partnerLeftId,
         rightName: right?.names?.zh?.full || union.partnerRightId,
+        leftId: union.partnerLeftId,
+        rightId: union.partnerRightId,
         focusSide: unionFocusSide[union.id] || union.focusSide || 'left',
         onToggle: () => onToggleUnion(union.id),
+        onSelectPerson,
       },
       style: { ...UNION_SIZE },
     });
@@ -123,26 +116,6 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
     nodeIds.add(personId);
   };
 
-  const addJunctionNode = (junctionId, portCount) => {
-    if (nodeIds.has(junctionId)) return;
-    const ports = [
-      { id: `${junctionId}:in`, handleId: 'in', side: 'NORTH' },
-      ...Array.from({ length: portCount }, (_, idx) => ({
-        id: `${junctionId}:out_${idx}`,
-        handleId: `out_${idx}`,
-        side: 'SOUTH',
-      })),
-    ];
-    nodes.push({
-      id: junctionId,
-      type: 'junction',
-      data: { ports },
-      style: { ...JUNCTION_SIZE },
-      ports,
-    });
-    nodeIds.add(junctionId);
-  };
-
   const addEdge = (source, target, index, sourceHandle, targetHandle) => {
     const id = `e_${source}_${target}_${index}`;
     if (edgeIds.has(id)) return;
@@ -159,20 +132,9 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
 
   const addChildrenEdges = (unionId, children) => {
     if (children.length === 0) return;
-    if (children.length === 1) {
-      const child = children[0];
-      addPersonNode(child.id);
-      addEdge(unionId, child.id, 0);
-      return;
-    }
-
-    const junctionId = `j-${unionId}`;
-    addJunctionNode(junctionId, children.length);
-    addEdge(unionId, junctionId, 0, undefined, 'in');
-
     children.forEach((child, idx) => {
       addPersonNode(child.id);
-      addEdge(junctionId, child.id, idx, `out_${idx}`);
+      addEdge(unionId, child.id, idx);
     });
   };
 
@@ -205,6 +167,45 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
   }
 
   if (grandUnionId && rootFocusSide === 'right') {
+    if (grandUnionId === MATERNAL_UNION_ID) {
+      const auntUnion = unionsById.get(AUNT_UNION_ID);
+      if (auntUnion) {
+        addUnionNode(auntUnion.id);
+        const grandChildren = (childrenByUnionId.get(grandUnionId) || [])
+          .map((id) => peopleById.get(id))
+          .filter(Boolean)
+          .sort(sortSiblings);
+        const childOrder = new Map(grandChildren.map((child, idx) => [child.id, idx]));
+
+        const mother = peopleById.get(rootUnion.partnerRightId);
+        const aunt = peopleById.get(auntUnion.partnerRightId);
+        const unionOrder = [
+          { unionId: rootUnionId, person: mother },
+          { unionId: auntUnion.id, person: aunt },
+        ].sort((a, b) => {
+          const aIndex = childOrder.get(a.person?.id);
+          const bIndex = childOrder.get(b.person?.id);
+          if (aIndex != null && bIndex != null && aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
+          return sortSiblings(a.person || {}, b.person || {});
+        });
+
+        unionOrder.forEach((item, idx) => {
+          addEdge(grandUnionId, item.unionId, idx);
+        });
+
+        const cousinChildren = (childrenByUnionId.get(auntUnion.id) || [])
+          .map((id) => peopleById.get(id))
+          .filter(Boolean)
+          .sort(sortSiblings);
+        addChildrenEdges(auntUnion.id, cousinChildren);
+      } else {
+        addEdge(grandUnionId, rootUnionId, 0);
+      }
+      return { nodes, edges };
+    }
+
     const grandChildren = (childrenByUnionId.get(grandUnionId) || [])
       .map((id) => peopleById.get(id))
       .filter(Boolean)
@@ -214,26 +215,6 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
       addChildrenEdges(grandUnionId, grandChildren);
     }
     addEdge(grandUnionId, rootUnionId, 0);
-
-    if (grandUnionId === MATERNAL_UNION_ID) {
-      grandChildren
-        .filter((child) => child.id !== activeParentId)
-        .forEach((sibling) => {
-          const siblingUnion = Array.from(unionsById.values()).find(
-            (union) =>
-              union.id !== rootUnionId &&
-              (union.partnerLeftId === sibling.id || union.partnerRightId === sibling.id)
-          );
-          if (!siblingUnion) return;
-          addUnionNode(siblingUnion.id);
-          addEdge(sibling.id, siblingUnion.id, 0);
-          const cousinChildren = (childrenByUnionId.get(siblingUnion.id) || [])
-            .map((id) => peopleById.get(id))
-            .filter(Boolean)
-            .sort(sortSiblings);
-          addChildrenEdges(siblingUnion.id, cousinChildren);
-        });
-    }
   } else if (grandUnionId) {
     addEdge(grandUnionId, rootUnionId, 0);
   }
@@ -380,7 +361,7 @@ export default function App() {
         <ReactFlow
           nodes={layoutedNodes}
           edges={layoutedEdges}
-          nodeTypes={{ unionNode: UnionNode, personNode: PersonNode, junction: JunctionNode }}
+          nodeTypes={{ unionNode: UnionNode, personNode: PersonNode }}
           fitView
           fitViewOptions={{ padding: 0.2 }}
         >

@@ -101,6 +101,12 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
     nodeIds.add(unionId);
   };
 
+  const setNodeMeta = (nodeId, meta) => {
+    const node = nodes.find((item) => item.id === nodeId);
+    if (!node) return;
+    node.data = { ...node.data, ...meta };
+  };
+
   const addPersonNode = (personId) => {
     const person = peopleById.get(personId);
     if (!person || nodeIds.has(personId)) return;
@@ -216,6 +222,47 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
     }
     addEdge(grandUnionId, rootUnionId, 0);
   } else if (grandUnionId) {
+    const grandUnion = unionsById.get(grandUnionId);
+    const grandParentId = grandUnion?.partnerLeftId;
+    const greatUnionId = grandParentId ? parentUnionByChildId.get(grandParentId) : null;
+    const grandUnionFocus = unionFocusSide[grandUnionId] || grandUnion?.focusSide || 'left';
+
+    if (greatUnionId && grandUnionFocus === 'left') {
+      addUnionNode(greatUnionId);
+      const greatChildren = (childrenByUnionId.get(greatUnionId) || [])
+        .map((id) => peopleById.get(id))
+        .filter(Boolean)
+        .sort(sortSiblings);
+
+      greatChildren.forEach((child, idx) => {
+        const childUnion = Array.from(unionsById.values()).find(
+          (union) =>
+            union.partnerLeftId === child.id || union.partnerRightId === child.id
+        );
+        if (child.id === grandParentId || childUnion) {
+          const unionId = child.id === grandParentId ? grandUnionId : childUnion?.id;
+          if (unionId) {
+            addUnionNode(unionId);
+            if (unionId !== grandUnionId) {
+              setNodeMeta(unionId, {
+                siblingOrder: idx,
+                siblingParentId: greatUnionId,
+              });
+            }
+          }
+          if (unionId) {
+            addEdge(greatUnionId, unionId, idx);
+          } else {
+            addPersonNode(child.id);
+            addEdge(greatUnionId, child.id, idx);
+          }
+        } else {
+          addPersonNode(child.id);
+          addEdge(greatUnionId, child.id, idx);
+        }
+      });
+    }
+
     addEdge(grandUnionId, rootUnionId, 0);
   }
 
@@ -274,6 +321,79 @@ async function layoutWithElk(nodes, edges) {
   const nodePositions = new Map();
   layout.children?.forEach((child) => {
     nodePositions.set(child.id, { x: child.x || 0, y: child.y || 0 });
+  });
+
+  const childMap = new Map();
+  edges.forEach((edge) => {
+    if (!childMap.has(edge.source)) childMap.set(edge.source, []);
+    childMap.get(edge.source).push(edge.target);
+  });
+
+  const collectSubtree = (startId) => {
+    const seen = new Set();
+    const stack = [startId];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (seen.has(current)) continue;
+      seen.add(current);
+      const children = childMap.get(current) || [];
+      children.forEach((child) => stack.push(child));
+    }
+    return seen;
+  };
+
+  if (nodePositions.has(ROOT_UNION_ID) && nodePositions.has(AUNT_UNION_ID)) {
+    const rootPos = nodePositions.get(ROOT_UNION_ID);
+    const auntPos = nodePositions.get(AUNT_UNION_ID);
+    if (rootPos && auntPos && rootPos.x > auntPos.x) {
+      const rootSubtree = collectSubtree(ROOT_UNION_ID);
+      const auntSubtree = collectSubtree(AUNT_UNION_ID);
+      const rootDelta = auntPos.x - rootPos.x;
+      const auntDelta = rootPos.x - auntPos.x;
+
+      rootSubtree.forEach((nodeId) => {
+        const pos = nodePositions.get(nodeId);
+        if (pos) nodePositions.set(nodeId, { x: pos.x + rootDelta, y: pos.y });
+      });
+      auntSubtree.forEach((nodeId) => {
+        const pos = nodePositions.get(nodeId);
+        if (pos) nodePositions.set(nodeId, { x: pos.x + auntDelta, y: pos.y });
+      });
+    }
+  }
+
+  const siblingGroups = new Map();
+  nodes.forEach((node) => {
+    const order = node.data?.siblingOrder;
+    const parentId = node.data?.siblingParentId;
+    if (order == null || !parentId) return;
+    if (!siblingGroups.has(parentId)) siblingGroups.set(parentId, []);
+    siblingGroups.get(parentId).push(node);
+  });
+
+  siblingGroups.forEach((groupNodes) => {
+    const orderedByBirth = [...groupNodes].sort(
+      (a, b) => a.data.siblingOrder - b.data.siblingOrder
+    );
+    const orderedByX = [...groupNodes]
+      .map((node) => ({
+        node,
+        x: nodePositions.get(node.id)?.x ?? 0,
+      }))
+      .sort((a, b) => a.x - b.x);
+
+    orderedByBirth.forEach((node, idx) => {
+      const desired = orderedByX[idx];
+      const currentPos = nodePositions.get(node.id);
+      if (!desired || !currentPos) return;
+      const delta = desired.x - currentPos.x;
+      if (Math.abs(delta) < 1) return;
+      const subtree = collectSubtree(node.id);
+      subtree.forEach((nodeId) => {
+        const pos = nodePositions.get(nodeId);
+        if (pos) nodePositions.set(nodeId, { x: pos.x + delta, y: pos.y });
+      });
+    });
   });
 
   return {

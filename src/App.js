@@ -26,6 +26,7 @@ function UnionNode({ data }) {
         onClick={() => data.onSelectPerson?.(data.leftId)}
       >
         {data.leftName}
+        {!data.leftAlive && <span aria-label="Deceased"> †</span>}
       </button>
       <button className="union-toggle" onClick={data.onToggle}>
         ⇄
@@ -36,6 +37,7 @@ function UnionNode({ data }) {
         onClick={() => data.onSelectPerson?.(data.rightId)}
       >
         {data.rightName}
+        {!data.rightAlive && <span aria-label="Deceased"> †</span>}
       </button>
       <Handle type="source" position={Position.Bottom} className="node-handle" />
     </div>
@@ -47,6 +49,7 @@ function PersonNode({ data }) {
     <button className="person-node" onClick={data.onSelect}>
       <Handle type="target" position={Position.Top} className="node-handle" />
       {data.name}
+      {!data.alive && <span aria-label="Deceased"> †</span>}
       <Handle type="source" position={Position.Bottom} className="node-handle" />
     </button>
   );
@@ -92,6 +95,8 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
         rightName: right?.names?.zh?.full || union.partnerRightId,
         leftId: union.partnerLeftId,
         rightId: union.partnerRightId,
+        leftAlive: left?.alive !== false,
+        rightAlive: right?.alive !== false,
         focusSide: unionFocusSide[union.id] || union.focusSide || 'left',
         onToggle: () => onToggleUnion(union.id),
         onSelectPerson,
@@ -115,6 +120,7 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
       type: 'personNode',
       data: {
         name: person.names?.zh?.full || person.id,
+        alive: person.alive !== false,
         onSelect: () => onSelectPerson(person.id),
       },
       style: { ...PERSON_SIZE },
@@ -223,12 +229,24 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
     addEdge(grandUnionId, rootUnionId, 0);
   } else if (grandUnionId) {
     const grandUnion = unionsById.get(grandUnionId);
-    const grandParentId = grandUnion?.partnerLeftId;
-    const greatUnionId = grandParentId ? parentUnionByChildId.get(grandParentId) : null;
     const grandUnionFocus = unionFocusSide[grandUnionId] || grandUnion?.focusSide || 'left';
+    const grandParentId =
+      grandUnionFocus === 'left' ? grandUnion?.partnerLeftId : grandUnion?.partnerRightId;
+    const greatUnionId = grandParentId ? parentUnionByChildId.get(grandParentId) : null;
 
-    if (greatUnionId && grandUnionFocus === 'left') {
+    if (greatUnionId) {
       addUnionNode(greatUnionId);
+      const greatUnion = unionsById.get(greatUnionId);
+      const greatUnionFocus = unionFocusSide[greatUnionId] || greatUnion?.focusSide || 'left';
+      const greatGrandParentId =
+        greatUnionFocus === 'left' ? greatUnion?.partnerLeftId : greatUnion?.partnerRightId;
+      const greatGreatUnionId = greatGrandParentId
+        ? parentUnionByChildId.get(greatGrandParentId)
+        : null;
+      if (greatGreatUnionId) {
+        addUnionNode(greatGreatUnionId);
+        addEdge(greatGreatUnionId, greatUnionId, 0);
+      }
       const greatChildren = (childrenByUnionId.get(greatUnionId) || [])
         .map((id) => peopleById.get(id))
         .filter(Boolean)
@@ -247,6 +265,29 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
               setNodeMeta(unionId, {
                 siblingOrder: idx,
                 siblingParentId: greatUnionId,
+              });
+              const unionChildren = (childrenByUnionId.get(unionId) || [])
+                .map((id) => peopleById.get(id))
+                .filter(Boolean)
+                .sort(sortSiblings);
+              unionChildren.forEach((grandChild, childIdx) => {
+                const grandChildUnion = Array.from(unionsById.values()).find(
+                  (union) =>
+                    union.partnerLeftId === grandChild.id ||
+                    union.partnerRightId === grandChild.id
+                );
+                if (grandChildUnion) {
+                  addUnionNode(grandChildUnion.id);
+                  addEdge(unionId, grandChildUnion.id, childIdx);
+                  const greatGrandChildren = (childrenByUnionId.get(grandChildUnion.id) || [])
+                    .map((id) => peopleById.get(id))
+                    .filter(Boolean)
+                    .sort(sortSiblings);
+                  addChildrenEdges(grandChildUnion.id, greatGrandChildren);
+                } else {
+                  addPersonNode(grandChild.id);
+                  addEdge(unionId, grandChild.id, childIdx);
+                }
               });
             }
           }
@@ -283,10 +324,10 @@ async function layoutWithElk(nodes, edges) {
       'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
       'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
       'elk.layered.considerModelOrder': 'true',
-      'elk.spacing.nodeNode': '60',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '100',
-      'elk.layered.spacing.edgeNodeBetweenLayers': '50',
-      'elk.spacing.edgeEdge': '20',
+      'elk.spacing.nodeNode': '90',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '140',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '70',
+      'elk.spacing.edgeEdge': '30',
     },
     children: nodes.map((node) => {
       const ports = node.ports || node.data?.ports;
@@ -396,6 +437,56 @@ async function layoutWithElk(nodes, edges) {
     });
   });
 
+  const nodeWidthById = new Map(
+    nodes.map((node) => [node.id, node.style?.width || PERSON_SIZE.width])
+  );
+
+  const shiftSubtree = (startId, delta) => {
+    if (Math.abs(delta) < 1) return;
+    const subtree = collectSubtree(startId);
+    subtree.forEach((nodeId) => {
+      const pos = nodePositions.get(nodeId);
+      if (pos) nodePositions.set(nodeId, { x: pos.x + delta, y: pos.y });
+    });
+  };
+
+  const resolveOverlaps = (gap = 20) => {
+    const buckets = new Map();
+    nodes.forEach((node) => {
+      const pos = nodePositions.get(node.id);
+      if (!pos) return;
+      const bucket = Math.round(pos.y / 20);
+      if (!buckets.has(bucket)) buckets.set(bucket, []);
+      buckets.get(bucket).push(node);
+    });
+
+    buckets.forEach((bucketNodes) => {
+      const ordered = bucketNodes
+        .map((node) => ({
+          node,
+          x: nodePositions.get(node.id)?.x ?? 0,
+        }))
+        .sort((a, b) => a.x - b.x);
+
+      let lastRight = -Infinity;
+      ordered.forEach(({ node, x }) => {
+        const width = nodeWidthById.get(node.id) || PERSON_SIZE.width;
+        const left = x - width / 2;
+        const right = x + width / 2;
+        if (left < lastRight + gap) {
+          const delta = lastRight + gap - left;
+          shiftSubtree(node.id, delta);
+          lastRight = right + delta;
+        } else {
+          lastRight = right;
+        }
+      });
+    });
+  };
+
+  resolveOverlaps();
+  resolveOverlaps(30);
+
   return {
     nodes: nodes.map((node) => ({
       ...node,
@@ -416,16 +507,20 @@ export default function App() {
   );
   const childrenByUnionId = useMemo(() => {
     const map = new Map();
-    familyData.childOf.forEach((link) => {
-      if (!map.has(link.unionId)) map.set(link.unionId, []);
-      map.get(link.unionId).push(link.childId);
+    familyData.unions.forEach((union) => {
+      if (!map.has(union.id)) map.set(union.id, []);
+      if (union.children?.length) {
+        map.get(union.id).push(...union.children);
+      }
     });
     return map;
   }, []);
   const parentUnionByChildId = useMemo(() => {
     const map = new Map();
-    familyData.childOf.forEach((link) => {
-      map.set(link.childId, link.unionId);
+    familyData.unions.forEach((union) => {
+      union.children?.forEach((childId) => {
+        map.set(childId, union.id);
+      });
     });
     return map;
   }, []);

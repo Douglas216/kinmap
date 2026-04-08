@@ -55,6 +55,23 @@ function PersonNode({ data }) {
   );
 }
 
+function validateUnionGenderRule(unions, peopleById) {
+  unions.forEach((union) => {
+    const left = peopleById.get(union.partnerLeftId);
+    const right = peopleById.get(union.partnerRightId);
+    if (left && left.gender !== 'M') {
+      console.warn(
+        `[union rule] ${union.id}: partnerLeftId (${union.partnerLeftId}) should be male (gender "M"), got "${left.gender}"`
+      );
+    }
+    if (right && right.gender !== 'F') {
+      console.warn(
+        `[union rule] ${union.id}: partnerRightId (${union.partnerRightId}) should be female (gender "F"), got "${right.gender}"`
+      );
+    }
+  });
+}
+
 function sortSiblings(a, b) {
   const aDob = a.dob ? new Date(a.dob) : null;
   const bDob = b.dob ? new Date(b.dob) : null;
@@ -146,12 +163,40 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
     if (children.length === 0) return;
     children.forEach((child, idx) => {
       addPersonNode(child.id);
+      setNodeMeta(child.id, { siblingOrder: idx, siblingParentId: unionId });
       addEdge(unionId, child.id, idx);
     });
   };
 
   const rootUnion = unionsById.get(rootUnionId);
   if (!rootUnion) return { nodes, edges };
+
+  // Special case: when viewing the maternal side and the aunt union is toggled
+  // to 冯义正 (who has no parents logged), collapse the view to only show the
+  // aunt's nuclear family. The wider tree (grandparents + sister-in-law's
+  // family) should not appear above or beside the aunt union.
+  const rootFocusAtEntry =
+    unionFocusSide[rootUnionId] || rootUnion.focusSide || 'left';
+  const auntUnionEntry = unionsById.get(AUNT_UNION_ID);
+  if (auntUnionEntry && rootFocusAtEntry === 'right') {
+    const auntFocus =
+      unionFocusSide[AUNT_UNION_ID] || auntUnionEntry.focusSide || 'left';
+    const auntFocusedPersonId =
+      auntFocus === 'left'
+        ? auntUnionEntry.partnerLeftId
+        : auntUnionEntry.partnerRightId;
+    const auntFocusedHasParents = parentUnionByChildId.has(auntFocusedPersonId);
+    if (!auntFocusedHasParents) {
+      addUnionNode(AUNT_UNION_ID);
+      const cousinChildren = (childrenByUnionId.get(AUNT_UNION_ID) || [])
+        .map((id) => peopleById.get(id))
+        .filter(Boolean)
+        .sort(sortSiblings);
+      addChildrenEdges(AUNT_UNION_ID, cousinChildren);
+      return { nodes, edges };
+    }
+  }
+
   addUnionNode(rootUnionId);
 
   const rawChildrenIds = childrenByUnionId.get(rootUnionId) || [];
@@ -204,6 +249,10 @@ function buildVisibleGraph(rootUnionId, unionFocusSide, maps) {
         });
 
         unionOrder.forEach((item, idx) => {
+          setNodeMeta(item.unionId, {
+            siblingOrder: idx,
+            siblingParentId: grandUnionId,
+          });
           addEdge(grandUnionId, item.unionId, idx);
         });
 
@@ -515,6 +564,10 @@ export default function App() {
     });
     return map;
   }, []);
+  useEffect(() => {
+    validateUnionGenderRule(familyData.unions, peopleById);
+  }, [peopleById]);
+
   const parentUnionByChildId = useMemo(() => {
     const map = new Map();
     familyData.unions.forEach((union) => {
